@@ -222,32 +222,33 @@ const response = await fetchWithRetry(apiUrl, {
   }),
 });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `HTTP Error: ${response.status}`);
-      }
+     if (!response.ok) {
+  const errorData = await response.json();
+  throw new Error(errorData.error?.message || `HTTP Error: ${response.status}`);
+}
 
-      const data = await response.json();
+const data = await response.json();
 
-      const replyText =
-        data.candidates?.[0]?.content?.parts?.[0]?.text ||
-        "Maaf, saya tidak dapat menghasilkan jawaban saat ini. Silakan coba lagi.";
+// ✅ Struktur response Grok (bukan Gemini)
+const replyText =
+  data.choices?.[0]?.message?.content ||
+  "Maaf, saya tidak dapat menghasilkan jawaban saat ini. Silakan coba lagi.";
 
-      const aiMessage = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: replyText,
-        timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-      };
+const aiMessage = {
+  id: Date.now() + 1,
+  role: 'assistant',
+  content: replyText,
+  timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+};
 
-      setConversations((prev) =>
-        prev.map((chat) => {
-          if (chat.id === currentChatId) {
-            return { ...chat, messages: [...chat.messages, aiMessage] };
-          }
-          return chat;
-        })
-      );
+setConversations((prev) =>
+  prev.map((chat) => {
+    if (chat.id === currentChatId) {
+      return { ...chat, messages: [...chat.messages, aiMessage] };
+    }
+    return chat;
+  })
+);
 
 } catch (error) {
       console.error("Error Grok API:", error);

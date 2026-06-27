@@ -112,9 +112,9 @@ export default function ChatInterface({ currentChatId, conversations, setConvers
     if (!textToSend.trim() || isTyping) return;
 
 // Ambil API Key dari Environment Variables Vite
-const apiKey = import.meta.env.VITE_GROK_API_KEY;
+const apiKey = import.meta.env.VITE_GROQ_API_KEY;
 if (!apiKey) {
-  alert("❌ API Key tidak ditemukan!\n\nPastikan Anda telah mengisi file .env di root project dengan:\nVITE_GROK_API_KEY=xai-...");
+  alert("❌ API Key tidak ditemukan!\n\nPastikan Anda telah mengisi file .env di root project dengan:\nVITE_GROQ_API_KEY=gsk-...");
   return;
 }
 
@@ -216,7 +216,7 @@ setConversations((prev) =>
 
       let errorContent = "⚠️ **Terjadi kesalahan koneksi**\n\n";
       if (error.message.includes("401") || error.message.includes("invalid_api_key")) {
-        errorContent = "🔑 **API Key tidak valid!**\n\nPastikan:\n- File `.env` sudah dibuat di root folder aplikasi Anda.\n- Isinya ditulis seperti ini: `VITE_GROK_API_KEY=xai-...`\n- Restart server development terminal (`npm run dev`) setelah mengedit `.env`.";
+        errorContent = "🔑 **API Key tidak valid!**\n\nPastikan:\n- File `.env` sudah dibuat di root folder aplikasi Anda.\n- Isinya ditulis seperti ini: ` VITE_GROQ_API_KEY=gsk-...`\n- Restart server development terminal (`npm run dev`) setelah mengedit `.env`.";
       } else if (error.message.includes("429") || error.message.includes("rate_limit")) {
         errorContent = "📊 **Kuota API Habis (Rate Limit)!**\n\nAnda melebihi batas permintaan. Silakan tunggu sekitar 1-2 menit sebelum mengirim pesan baru.";
       } else if (error.message.includes("400") || error.message.includes("invalid_request")) {

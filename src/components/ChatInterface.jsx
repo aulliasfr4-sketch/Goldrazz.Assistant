@@ -111,12 +111,12 @@ export default function ChatInterface({ currentChatId, conversations, setConvers
     const textToSend = messageText || input;
     if (!textToSend.trim() || isTyping) return;
 
-    // Ambil API Key dari Environment Variables Vite
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      alert("❌ API Key tidak ditemukan!\n\nPastikan Anda telah mengisi file .env di root project dengan:\nVITE_GEMINI_API_KEY=AIzaSy...");
-      return;
-    }
+// Ambil API Key dari Environment Variables Vite
+const apiKey = import.meta.env.VITE_GROK_API_KEY;
+if (!apiKey) {
+  alert("❌ API Key tidak ditemukan!\n\nPastikan Anda telah mengisi file .env di root project dengan:\nVITE_GROK_API_KEY=xai-...");
+  return;
+}
 
     const userMessageText = textToSend;
     setInput("");
@@ -143,26 +143,42 @@ export default function ChatInterface({ currentChatId, conversations, setConvers
 
     setIsTyping(true);
 
-    try {
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
-      // Ambil 6 pesan terakhir saja agar hemat token dan tidak memicu kuota habis (Error 429)
-      const recentMessages = currentMessages.slice(-6);
+try {
+  const apiUrl = "https://api.x.ai/v1/chat/completions";
+  const recentMessages = currentMessages.slice(-6);
 
-      // ✅ PERBAIKAN: Struktur data terkompresi yang aman dari limitasi Free Tier Google
-      const contentsWithHistory = [
-        {
-          role: "user",
-          parts: [{ text: `[SISTEM INSTRUKSI]: ${SYSTEM_PROMPT}` }],
-        },
-        {
-          role: "model",
-          parts: [{ text: "Baik, saya mengerti instruksi sistem. Saya adalah Goldrazz Assistant yang siap melayani dengan profesional." }],
-        },
-        ...recentMessages.map((msg) => ({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }],
-        })),
-      ];
+  // Format pesan untuk Grok (OpenAI-compatible)
+  const contentsWithHistory = [
+    // System prompt di awal sebagai role "system"
+    {
+      role: "system",
+      content: SYSTEM_PROMPT,
+    },
+    // Riwayat pesan sebelumnya
+    ...recentMessages.map((msg) => ({
+      role: msg.role === 'user' ? 'user' : 'assistant', // ⚠️ Grok pakai "assistant", bukan "model"
+      content: msg.content,
+    })),
+  ];
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`, // ⚠️ Grok pakai Bearer token, bukan query param
+    },
+    body: JSON.stringify({
+      model: "grok-3-mini", // atau "grok-3" untuk yang lebih canggih
+      messages: contentsWithHistory,
+      max_tokens: 1000,
+      temperature: 0.7,
+    }),
+  });
+
+  const data = await response.json();
+
+  // Ambil teks respons dari Grok
+  const botReply = data.choices[0].message.content;
 
       // Jika pesan terakhir belum masuk ke recentMessages, tambahkan secara manual di akhir paket data
       if (recentMessages.length === 0 || recentMessages[recentMessages.length - 1].content !== userMessageText) {
@@ -233,14 +249,16 @@ const response = await fetchWithRetry(apiUrl, {
         })
       );
 
-    } catch (error) {
-      console.error("Error Gemini API:", error);
+} catch (error) {
+      console.error("Error Grok API:", error);
 
       let errorContent = "⚠️ **Terjadi kesalahan koneksi**\n\n";
-      if (error.message.includes("API_KEY_INVALID") || error.message.includes("400")) {
-        errorContent = "🔑 **API Key tidak valid!**\n\nPastikan:\n- File `.env` sudah dibuat di root folder aplikasi Anda.\n- Isinya ditulis seperti ini: `VITE_GEMINI_API_KEY=AIzaSy...`\n- Restart server development terminal (`npm run dev`) setelah mengedit `.env`.";
-      } else if (error.message.includes("QUOTA_EXCEEDED") || error.message.includes("429")) {
-        errorContent = "📊 **Kuota Kecepatan API Habis (Rate Limit)!**\n\nAnda menggunakan tingkat gratis (Free Tier). Silakan tunggu sekitar 1-2 menit sebelum mengirim pesan baru, atau gunakan API Key cadangan lainnya.";
+      if (error.message.includes("401") || error.message.includes("invalid_api_key")) {
+        errorContent = "🔑 **API Key tidak valid!**\n\nPastikan:\n- File `.env` sudah dibuat di root folder aplikasi Anda.\n- Isinya ditulis seperti ini: `VITE_GROK_API_KEY=xai-...`\n- Restart server development terminal (`npm run dev`) setelah mengedit `.env`.";
+      } else if (error.message.includes("429") || error.message.includes("rate_limit")) {
+        errorContent = "📊 **Kuota API Habis (Rate Limit)!**\n\nAnda melebihi batas permintaan. Silakan tunggu sekitar 1-2 menit sebelum mengirim pesan baru.";
+      } else if (error.message.includes("400") || error.message.includes("invalid_request")) {
+        errorContent = "⚠️ **Permintaan tidak valid!**\n\nCoba muat ulang halaman dan kirim ulang pesan Anda.";
       } else if (!navigator.onLine) {
         errorContent = "📡 **Tidak ada koneksi internet!**\n\nPeriksa koneksi jaringan Anda dan coba klik kirim ulang.";
       } else {

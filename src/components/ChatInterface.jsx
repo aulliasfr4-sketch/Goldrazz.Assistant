@@ -161,46 +161,19 @@ try {
     })),
   ];
 
-  const response = await fetch(apiUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`, // ⚠️ Grok pakai Bearer token, bukan query param
-    },
-    body: JSON.stringify({
-      model: "grok-3-mini", // atau "grok-3" untuk yang lebih canggih
-      messages: contentsWithHistory,
-      max_tokens: 1000,
-      temperature: 0.7,
-    }),
-  });
-
-  const data = await response.json();
-
-  // Ambil teks respons dari Grok
-  const botReply = data.choices[0].message.content;
-
-      // Jika pesan terakhir belum masuk ke recentMessages, tambahkan secara manual di akhir paket data
-      if (recentMessages.length === 0 || recentMessages[recentMessages.length - 1].content !== userMessageText) {
-        contentsWithHistory.push({
-          role: "user",
-          parts: [{ text: userMessageText }]
-        });
-      }
-
-// Fungsi retry otomatis saat kena rate limit
+// ✅ Fungsi retry otomatis untuk Grok
 const fetchWithRetry = async (url, options, maxRetries = 3) => {
   for (let i = 0; i < maxRetries; i++) {
     const res = await fetch(url, options);
     if (res.status !== 429) return res;
-    const waitTime = (i + 1) * 5000; // 5 detik, 10 detik, 15 detik
+    const waitTime = (i + 1) * 5000;
     console.warn(`Rate limit hit, retrying in ${waitTime/1000}s...`);
     await new Promise(resolve => setTimeout(resolve, waitTime));
   }
   throw new Error("429: Rate limit. Tunggu beberapa menit lalu coba lagi.");
 };
 
-const response = await fetch("https://api.x.ai/v1/chat/completions", {
+const response = await fetchWithRetry("https://api.x.ai/v1/chat/completions", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",

@@ -200,36 +200,27 @@ const fetchWithRetry = async (url, options, maxRetries = 3) => {
   throw new Error("429: Rate limit. Tunggu beberapa menit lalu coba lagi.");
 };
 
-const response = await fetchWithRetry(apiUrl, {
+const response = await fetch("https://api.x.ai/v1/chat/completions", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
+    "Authorization": `Bearer ${apiKey}`,
   },
   body: JSON.stringify({
-    contents: contentsWithHistory,
-    generationConfig: {
-      temperature: 0.7,
-      topK: 40,
-      topP: 0.95,
-      maxOutputTokens: 2048,
-    },
-    safetySettings: [
-      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-    ],
+    model: "grok-3-mini",
+    messages: contentsWithHistory,
+    max_tokens: 1000,
+    temperature: 0.7,
   }),
 });
 
-     if (!response.ok) {
+if (!response.ok) {
   const errorData = await response.json();
   throw new Error(errorData.error?.message || `HTTP Error: ${response.status}`);
 }
 
 const data = await response.json();
 
-// ✅ Struktur response Grok (bukan Gemini)
 const replyText =
   data.choices?.[0]?.message?.content ||
   "Maaf, saya tidak dapat menghasilkan jawaban saat ini. Silakan coba lagi.";

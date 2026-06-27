@@ -144,49 +144,46 @@ if (!apiKey) {
     setIsTyping(true);
 
 try {
-  const apiUrl = "https://api.x.ai/v1/chat/completions";
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
   const recentMessages = currentMessages.slice(-6);
 
-  // Format pesan untuk Grok (OpenAI-compatible)
+  // Format pesan untuk Groq (OpenAI-compatible)
   const contentsWithHistory = [
-    // System prompt di awal sebagai role "system"
     {
       role: "system",
       content: SYSTEM_PROMPT,
     },
-    // Riwayat pesan sebelumnya
     ...recentMessages.map((msg) => ({
-      role: msg.role === 'user' ? 'user' : 'assistant', // ⚠️ Grok pakai "assistant", bukan "model"
+      role: msg.role === 'user' ? 'user' : 'assistant',
       content: msg.content,
     })),
   ];
 
-// ✅ Fungsi retry otomatis untuk Grok
-const fetchWithRetry = async (url, options, maxRetries = 3) => {
-  for (let i = 0; i < maxRetries; i++) {
-    const res = await fetch(url, options);
-    if (res.status !== 429) return res;
-    const waitTime = (i + 1) * 5000;
-    console.warn(`Rate limit hit, retrying in ${waitTime/1000}s...`);
-    await new Promise(resolve => setTimeout(resolve, waitTime));
-  }
-  throw new Error("429: Rate limit. Tunggu beberapa menit lalu coba lagi.");
-};
+  // Fungsi retry otomatis untuk Groq
+  const fetchWithRetry = async (url, options, maxRetries = 3) => {
+    for (let i = 0; i < maxRetries; i++) {
+      const res = await fetch(url, options);
+      if (res.status !== 429) return res;
+      const waitTime = (i + 1) * 5000;
+      console.warn(`Rate limit hit, retrying in ${waitTime/1000}s...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    throw new Error("429: Rate limit. Tunggu beberapa menit lalu coba lagi.");
+  };
 
-const response = await fetchWithRetry("https://api.x.ai/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${apiKey}`,
-  },
-  body: JSON.stringify({
-    model: "grok-3-mini",
-    messages: contentsWithHistory,
-    max_tokens: 1000,
-    temperature: 0.7,
-  }),
-});
-
+  const response = await fetchWithRetry("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: contentsWithHistory,
+      max_tokens: 1000,
+      temperature: 0.7,
+    }),
+  });
 if (!response.ok) {
   const errorData = await response.json();
   throw new Error(errorData.error?.message || `HTTP Error: ${response.status}`);
